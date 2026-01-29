@@ -1,3 +1,4 @@
+import calendar
 import json
 from pathlib import Path
 
@@ -6,7 +7,70 @@ import pandas as pd
 import streamlit as st
 from branca.colormap import LinearColormap
 from folium.features import GeoJsonTooltip
+from jinja2 import Template
 from streamlit_folium import st_folium
+
+_COLORMAP_TEMPLATE_BOTTOMLEFT = Template(
+    """
+    {% macro script(this, kwargs) %}
+        var {{this.get_name()}} = {};
+
+        {%if this.color_range %}
+        {{this.get_name()}}.color = d3.scale.threshold()
+                  .domain({{this.color_domain}})
+                  .range({{this.color_range}});
+        {%else%}
+        {{this.get_name()}}.color = d3.scale.threshold()
+                  .domain([{{ this.color_domain[0] }}, {{ this.color_domain[-1] }}])
+                  .range(['{{ this.fill_color }}', '{{ this.fill_color }}']);
+        {%endif%}
+
+        {{this.get_name()}}.x = d3.scale.linear()
+                  .domain([{{ this.color_domain[0] }}, {{ this.color_domain[-1] }}])
+                  .range([0, {{ this.width }} - 50]);
+
+        {{this.get_name()}}.legend = L.control({position: 'bottomleft'});
+        {{this.get_name()}}.legend.onAdd = function (map) {var div = L.DomUtil.create('div', 'legend'); return div};
+        {{this.get_name()}}.legend.addTo({{this._parent.get_name()}});
+
+        {{this.get_name()}}.xAxis = d3.svg.axis()
+            .scale({{this.get_name()}}.x)
+            .orient("top")
+            .tickSize(1)
+            .tickValues([{{ this.color_domain[0] }}, {{ this.color_domain[-1] }}]);
+
+        {{this.get_name()}}.svg = d3.select(".legend.leaflet-control").append("svg")
+            .attr("id", 'legend')
+            .attr("width", {{ this.width }})
+            .attr("height", {{ this.height }});
+
+        {{this.get_name()}}.g = {{this.get_name()}}.svg.append("g")
+            .attr("class", "key")
+            .attr("fill", {{ this.text_color | tojson }})
+            .attr("transform", "translate(25,16)");
+
+        {{this.get_name()}}.g.selectAll("rect")
+            .data({{this.get_name()}}.color.range().map(function(d, i) {
+              return {
+                x0: i ? {{this.get_name()}}.x({{this.get_name()}}.color.domain()[i - 1]) : {{this.get_name()}}.x.range()[0],
+                x1: i < {{this.get_name()}}.color.domain().length ? {{this.get_name()}}.x({{this.get_name()}}.color.domain()[i]) : {{this.get_name()}}.x.range()[1],
+                z: d
+              };
+            }))
+          .enter().append("rect")
+            .attr("height", {{ this.height }} - 30)
+            .attr("x", function(d) { return d.x0; })
+            .attr("width", function(d) { return d.x1 - d.x0; })
+            .style("fill", function(d) { return d.z; });
+
+        {{this.get_name()}}.g.call({{this.get_name()}}.xAxis).append("text")
+            .attr("class", "caption")
+            .attr("y", 21)
+            .attr("fill", {{ this.text_color | tojson }})
+            .text({{ this.caption|tojson }});
+    {% endmacro %}
+    """
+)
 
 
 @st.cache_data
@@ -102,6 +166,16 @@ def _map_codes_to_names(df):
     return df
 
 
+def _get_timestamp_column(df):
+    for key in ("Zeitstempel", "Datum", "Date", "Timestamp"):
+        if key in df.columns:
+            return key
+    first = df.columns[0] if len(df.columns) else None
+    if isinstance(first, str) and first.startswith("Unnamed"):
+        return first
+    return None
+
+
 def _merge_geojson_by_property(geojson_obj, feature_key):
     if not feature_key or not feature_key.startswith("properties."):
         return geojson_obj
@@ -147,18 +221,19 @@ def get_kantonskarte_month_options(
         return ["Total"]
 
     df = _load_timeseries(str(data_file), sheet_name)
-    if "Zeitstempel" not in df.columns:
+    ts_col = _get_timestamp_column(df)
+    if not ts_col:
         return ["Total"]
 
-    df["Zeitstempel"] = pd.to_datetime(df["Zeitstempel"], dayfirst=True, errors="coerce")
-    month_options = (
-        df["Zeitstempel"]
+    df[ts_col] = pd.to_datetime(df[ts_col], dayfirst=True, errors="coerce")
+    month_numbers = (
+        df[ts_col]
         .dropna()
-        .dt.to_period("M")
-        .astype(str)
+        .dt.month
         .unique()
     )
-    month_options = sorted(month_options)
+    month_numbers = sorted(int(m) for m in month_numbers if pd.notna(m))
+    month_options = [calendar.month_name[m] for m in month_numbers if 1 <= m <= 12]
     return ["Total"] + month_options
 
 
@@ -180,10 +255,16 @@ def build_kantonskarte_map(
         return None, f"GeoJSON fehlt: {geo_file.as_posix()}"
 
     df = _load_timeseries(str(data_file), sheet_name)
-    if "Zeitstempel" in df.columns:
-        df["Zeitstempel"] = pd.to_datetime(df["Zeitstempel"], dayfirst=True, errors="coerce")
+    ts_col = _get_timestamp_column(df)
+    if ts_col:
+        df[ts_col] = pd.to_datetime(df[ts_col], dayfirst=True, errors="coerce")
         if selected_month and selected_month != "Total":
-            df = df[df["Zeitstempel"].dt.to_period("M").astype(str) == selected_month]
+            try:
+                month_index = list(calendar.month_name).index(selected_month)
+            except ValueError:
+                month_index = None
+            if month_index:
+                df = df[df[ts_col].dt.month == month_index]
 
     totals = _build_canton_totals(df, metric_label, split_mode)
     totals = _map_codes_to_names(totals)
@@ -233,6 +314,7 @@ def build_kantonskarte_map(
         vmin=totals["Wert"].min(),
         vmax=totals["Wert"].max(),
     )
+    colormap._template = _COLORMAP_TEMPLATE_BOTTOMLEFT
     colormap.caption = f"{metric_label} (kWh)"
     colormap.add_to(m)
 
@@ -272,8 +354,9 @@ def plot_kantonskarte(
     month_options = get_kantonskarte_month_options(data_path=data_path, sheet_name=sheet_name)
 
     selected_month = st.selectbox(
-        "Month",
+        "",
         month_options,
+        index=0,
         label_visibility="collapsed",
     )
 
