@@ -7,8 +7,7 @@ from plots.kpi import plot_kpis
 from plots.timeseries import plot_time_series
 from plots.heatmap import plot_heatmap_import_export
 from plots.production import production_plots
-from plots.temperature_scatterplot import temp_scatter
-# from plots.consumption import plot_consumption
+from plots.temperature_scatterplot import temp_scatter_single
 from plots.geography import plot_kantonskarte
 from state.session_state import init_state
 from plots.kpi_with_icons import render_energy_kpis
@@ -23,25 +22,40 @@ st.set_page_config(
 st.markdown(
     """
 <style>
-/* Make checkbox rows smaller without negative margin overlap */
+/* Compact checkboxes */
 div[data-testid="stCheckbox"]{
-  transform: scale(0.85);
+  transform: scale(0.92);
   transform-origin: left center;
   margin: 0 !important;
   padding: 0 !important;
 }
-
-/* Remove built-in padding/min-height that creates tall rows */
 div[data-testid="stCheckbox"] label{
   padding: 0 !important;
   margin: 0 !important;
   min-height: 0 !important;
   line-height: 1.0 !important;
 }
-
-/* If Streamlit adds vertical spacing between elements in a block */
 div[data-testid="stVerticalBlock"]{
-  gap: 0.25rem !important;
+  gap: 0.35rem !important;
+}
+
+/* Tabs: active label + underline */
+div[data-testid="stTabs"] button[aria-selected="true"]{
+  color: #C24B45 !important;
+  font-weight: 700 !important;
+}
+div[data-testid="stTabs"] button[aria-selected="true"]::after{
+  background-color: #C24B45 !important;
+}
+
+/* Tabs: inactive */
+div[data-testid="stTabs"] button[aria-selected="false"]{
+  color: #2E2E2E !important;
+}
+
+/* Checkbox: checked color (browser-supported) */
+div[data-testid="stCheckbox"] input[type="checkbox"]{
+  accent-color: #C24B45 !important;
 }
 </style>
 """,
@@ -63,7 +77,8 @@ heat_height = prod_height
 heat_container_height = int(138 * scale)
 map_width = int(400 * scale)
 map_height = int(220 * scale)
-temp_height = int(260 * scale)
+temp_height = int(390 * scale)
+temp_plot_width = int(620 * scale)
 
 # ─────────────────────────────────────────────
 # TOP ROW
@@ -83,70 +98,68 @@ with kpi_left:
 
 with kpi_right:
     with st.container(border=True):
-        st.markdown("##### Impact of temperature on national electricity consumption and Rhine river flow ")
+        st.markdown("##### Temperature impact on energy consumption and river flow")
 
-        def legend_toggle(label: str, color: str, key: str, default=True, marker="dot"):
-            c_marker, c_label, c_toggle = st.columns([0.10, 0.72, 0.18], vertical_alignment="center", gap="small")
+        tab_cons, tab_rhine = st.tabs(["Landesverbrauch", "Wasserführung Rhein"])
 
-            with c_marker:
-                if marker == "line":
-                    st.markdown(
-                        f"<div style='width:16px;height:2px;background:{color};border-radius:2px;margin-top:8px;'></div>",
-                        unsafe_allow_html=True,
-                    )
-                else:
-                    st.markdown(
-                        f"<div style='width:9px;height:9px;border-radius:50%;background:{color};margin-top:6px;'></div>",
-                        unsafe_allow_html=True,
-                    )
+        # Tab 1: Landesverbrauch vs Temperature
+        with tab_cons:
+            # spacer to visually center the chart
+            spacer, plot_col, ctrl_col = st.columns([0.12, 3.0, 1.1], gap="small")
 
-            with c_label:
-                st.markdown(
-                    f"<div style='font-size:0.72rem;line-height:1.0;margin:0;padding:0;'>{label}</div>",
-                    unsafe_allow_html=True,
+            with ctrl_col:
+                st.markdown("**Controls**")
+                show_trend_cons = st.checkbox("Trendline", value=True, key="cons_trend")
+                show_out_cons = st.checkbox("Outliers", value=False, key="cons_out")
+
+            with plot_col:
+                st.caption("Higher temperatures are associated with lower consumption.")
+                fig_cons = temp_scatter_single(
+                    df_cleaned,
+                    y_col="Landesverbrauch",
+                    y_label="National Consumption (GWh)",
+                    color_points=LANDESVERBRAUCH, # scatter dots
+                    color_trend=LANDESVERBRAUCH, # trendline
+                    color_outliers="#EBC79E", # outlier ring color
+                    outlier="high",
+                    height=temp_height,
+                    width=temp_plot_width,
+                    compact=True,
                 )
+                # trace order: 0 scatter dots, 1 trend, 2 outliers
+                fig_cons.data[1].visible = show_trend_cons
+                fig_cons.data[2].visible = show_out_cons
 
-            with c_toggle:
-                return st.checkbox("", value=default, key=key, label_visibility="collapsed")
+                # container width of plotly is turned off
+                st.plotly_chart(fig_cons, use_container_width=False)
 
-        # Wrap the toggle/legend stack to scope CSS compression
-        st.markdown('<div class="legend-panel">', unsafe_allow_html=True)
+        # Tab 2: Rhine flow vs Temperature
+        with tab_rhine:
+            spacer, plot_col, ctrl_col = st.columns([0.12, 3.0, 1.1], gap="small")
 
-        show_cons = legend_toggle("National consumption", LANDESVERBRAUCH, "dl_cons", marker="dot")
-        show_rhine = legend_toggle("Rhine river flow", WASSERFUEHRUNG, "dl_rhine", marker="dot")
-        show_trend_cons = legend_toggle(
-            "Trend line (national consumption)", LANDESVERBRAUCH, "dl_trend_cons", marker="line"
-        )
-        show_trend_rhine = legend_toggle(
-            "Trend line (Rhine river flow)", WASSERFUEHRUNG, "dl_trend_rhine", marker="line"
-        )
-        show_out_cons = legend_toggle("Outliers - national consumption", "#868D07", "dl_out_cons", marker="dot")
-        show_out_rhine = legend_toggle("Outliers - Rhine", "#C8C36D", "dl_out_rhine", marker="dot")
+            with ctrl_col:
+                st.markdown("**Controls**")
+                show_trend_rhine = st.checkbox("Trendline", value=True, key="rhine_trend")
+                show_out_rhine = st.checkbox("Outliers", value=False, key="rhine_out")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+            with plot_col:
+                st.caption("Higher temperatures are associated with changes in river flow.")
+                fig_rhine = temp_scatter_single(
+                    df_cleaned,
+                    y_col="Wasserführung Rhein",
+                    y_label="Rhine River Flow (m³/s)",
+                    color_points=WASSERFUEHRUNG, # scatter dots
+                    color_trend=WASSERFUEHRUNG, # trendline
+                    color_outliers="#68875D", # outlier ring color
+                    outlier="low",
+                    height=temp_height,
+                    width=temp_plot_width,
+                    compact=True,
+                )
+                fig_rhine.data[1].visible = show_trend_rhine
+                fig_rhine.data[2].visible = show_out_rhine
 
-        fig_temp = temp_scatter(
-            df_cleaned,
-            width=None,
-            height=temp_height,
-            compact=True,
-            show_controls=False,
-            show_legend=False,
-        )
-
-        fig_temp.data[0].visible = show_cons
-        fig_temp.data[1].visible = (not show_cons)
-
-        fig_temp.data[2].visible = show_rhine
-        fig_temp.data[3].visible = (not show_rhine)
-
-        fig_temp.data[4].visible = show_trend_cons
-        fig_temp.data[5].visible = show_trend_rhine
-
-        fig_temp.data[6].visible = show_out_cons
-        fig_temp.data[7].visible = show_out_rhine
-
-        st.plotly_chart(fig_temp, use_container_width=True)
+                st.plotly_chart(fig_rhine, use_container_width=False)
 
 # ─────────────────────────────────────────────
 # MIDDLE ROW
