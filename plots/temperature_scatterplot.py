@@ -96,7 +96,7 @@ def temp_scatter_single(
         showgrid=False,
         linecolor=ACHSE,
         linewidth=2,
-        title_font=dict(size=12, color=ACHSE),
+        title_font=dict(size=14, color=ACHSE),
         tickfont=dict(color=ACHSE),
     )
 
@@ -106,7 +106,7 @@ def temp_scatter_single(
         showgrid=False,
         linecolor=ACHSE,
         linewidth=2,
-        title_font=dict(size=12, color=ACHSE),
+        title_font=dict(size=13.5, color=ACHSE),
         tickfont=dict(color=ACHSE),
     )
 
