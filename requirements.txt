@@ -1,9 +1,11 @@
 streamlit
 pandas
-matplotlib
 numpy
 plotly
 openpyxl
+altair
+matplotlib
 folium
+branca
+jinja2
 streamlit-folium
-
