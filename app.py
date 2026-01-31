@@ -22,6 +22,11 @@ st.set_page_config(
 st.markdown(
     """
 <style>
+/* Remove top white space */
+.block-container {
+    padding-top: 0.5rem !important;
+}
+
 /* Compact checkboxes */
 div[data-testid="stCheckbox"]{
   transform: scale(0.92);
@@ -100,20 +105,29 @@ with kpi_right:
     with st.container(border=True):
         st.markdown("##### Temperature impact on energy consumption and river flow")
 
-        tab_cons, tab_rhine = st.tabs(["Landesverbrauch", "Wasserführung Rhein"])
+        tab_cons, tab_rhine = st.tabs(["National Consumption", "Rhine River Flow"])
 
         # Tab 1: Landesverbrauch vs Temperature
         with tab_cons:
+            st.markdown(
+                """
+                <div style="text-align: center; font-size: 1rem; color: #6b6b6b; white-space:nowrap;">
+                    Higher temperatures are associated with lower energy consumption.
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            # st.caption("Higher temperatures are associated with lower energy consumption.")
             # spacer to visually center the chart
             spacer, plot_col, ctrl_col = st.columns([0.12, 3.0, 1.1], gap="small")
 
             with ctrl_col:
+                st.markdown("<div style='height: 8rem;'></div>", unsafe_allow_html=True)
                 st.markdown("**Controls**")
                 show_trend_cons = st.checkbox("Trendline", value=True, key="cons_trend")
                 show_out_cons = st.checkbox("Outliers", value=False, key="cons_out")
 
             with plot_col:
-                st.caption("Higher temperatures are associated with lower consumption.")
                 fig_cons = temp_scatter_single(
                     df_cleaned,
                     y_col="Landesverbrauch",
@@ -130,20 +144,30 @@ with kpi_right:
                 fig_cons.data[1].visible = show_trend_cons
                 fig_cons.data[2].visible = show_out_cons
 
+                st.markdown("<div style='height: 1.05rem;'></div>", unsafe_allow_html=True)
                 # container width of plotly is turned off
                 st.plotly_chart(fig_cons, use_container_width=False)
 
         # Tab 2: Rhine flow vs Temperature
         with tab_rhine:
+            st.markdown(
+                """
+                <div style="text-align: center; font-size: 1rem; color: #6b6b6b; white-space:nowrap;">
+                    Higher temperatures are associated with a slight increase in river flow.
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            # st.caption("Higher temperatures are associated with a slight increase in river flow.")
             spacer, plot_col, ctrl_col = st.columns([0.12, 3.0, 1.1], gap="small")
 
             with ctrl_col:
+                st.markdown("<div style='height: 8rem;'></div>", unsafe_allow_html=True)
                 st.markdown("**Controls**")
                 show_trend_rhine = st.checkbox("Trendline", value=True, key="rhine_trend")
                 show_out_rhine = st.checkbox("Outliers", value=False, key="rhine_out")
 
             with plot_col:
-                st.caption("Higher temperatures are associated with changes in river flow.")
                 fig_rhine = temp_scatter_single(
                     df_cleaned,
                     y_col="Wasserführung Rhein",
@@ -159,6 +183,7 @@ with kpi_right:
                 fig_rhine.data[1].visible = show_trend_rhine
                 fig_rhine.data[2].visible = show_out_rhine
 
+                st.markdown("<div style='height: 1.05rem;'></div>", unsafe_allow_html=True)
                 st.plotly_chart(fig_rhine, use_container_width=False)
 
 # ─────────────────────────────────────────────
