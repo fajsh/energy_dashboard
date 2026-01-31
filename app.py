@@ -82,8 +82,8 @@ heat_height = prod_height
 heat_container_height = int(138 * scale)
 map_width = int(400 * scale)
 map_height = int(220 * scale)
-temp_height = int(390 * scale)
-temp_plot_width = int(620 * scale)
+temp_height = int(390 * 0.80)
+temp_plot_width = int(620 * 0.80)
 
 # ─────────────────────────────────────────────
 # TOP ROW
