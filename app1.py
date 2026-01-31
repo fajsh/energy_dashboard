@@ -48,7 +48,7 @@ st.markdown(
 <style>
 /* Remove top white space */
 .block-container {
-    padding-top: 0.5rem !important;
+    padding-top: 1.5rem !important;
 }
 
 /* Compact checkboxes */
