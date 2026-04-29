@@ -1,12 +1,9 @@
-# Energy Dashboard 2025
+# Energie Dashboard Schweiz 2025
 
 ## Projektbeschreibung
 Interaktives Dashboard zur Analyse von Energieproduktion und -verbrauch sowie die regionalen Unterschieden in der Schweiz.
 
-Die Daten basieren auf der offiziellen Elektrizitätsstatistik des Bundesamts für Energie (BFE).
-
-Bundesamt für Energie (BFE):
-https://www.bfe.admin.ch/bfe/de/home/versorgung/statistik-und-geodaten/energiestatistiken/elektrizitaetsstatistik.html
+Die Daten basieren auf der offiziellen Elektrizitätsstatistik des Bundesamts für Energie (BFE: https://www.bfe.admin.ch/bfe/de/home/versorgung/statistik-und-geodaten/energiestatistiken/elektrizitaetsstatistik.html). Dieses Dashboard wurde im Rahmen des Moduls CDS-111-Datenvisualisierung erstellt. 
 
 ## Architektur
 - Datenimport: /data
