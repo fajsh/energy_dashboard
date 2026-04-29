@@ -5,7 +5,7 @@ Interaktives Dashboard zur Analyse von Energieproduktion und -verbrauch sowie di
 
 Die Daten basieren auf der offiziellen Elektrizitätsstatistik des Bundesamts für Energie (https://www.bfe.admin.ch/bfe/de/home/versorgung/statistik-und-geodaten/energiestatistiken/elektrizitaetsstatistik.html). 
 
-Das Dashboard wurde im Rahmen des Moduls CDS-111-Datenvisualisierung HS25 erstellt. 
+Das Dashboard wurde im Rahmen des Moduls CDS-111-Datenvisualisierung HS25 an der FHGR erstellt. 
 
 ## Architektur
 - Datenimport: /data
